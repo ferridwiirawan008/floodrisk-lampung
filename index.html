@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>FloodRisk Lampung</title>
+
+    <!-- LEAFLET -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+    <style>
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: Arial, sans-serif;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+
+        /* =========================
+           JUDUL
+        ========================= */
+
+        .title-box {
+            position: absolute;
+            top: 15px;
+            left: 60px;
+            z-index: 1000;
+
+            background: white;
+            padding: 12px 18px;
+
+            border-radius: 8px;
+
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        }
+
+        .title-box h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .title-box p {
+            margin: 4px 0 0 0;
+            font-size: 12px;
+            color: #666;
+        }
+
+
+        /* =========================
+           INFO PANEL
+        ========================= */
+
+        .info-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+
+            width: 220px;
+
+            background: white;
+            padding: 12px 15px;
+
+            border-radius: 8px;
+
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+
+            font-size: 12px;
+        }
+
+        .info-panel h4 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+        }
+
+        .info-panel p {
+            margin: 5px 0;
+        }
+
+
+        /* =========================
+           LEGEND
+        ========================= */
+
+        .legend {
+            background: white;
+            padding: 12px 14px;
+
+            line-height: 22px;
+
+            border-radius: 8px;
+
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        }
+
+        .legend h4 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+        }
+
+        .legend i {
+            width: 18px;
+            height: 18px;
+
+            float: left;
+
+            margin-right: 8px;
+
+            border-radius: 3px;
+        }
+
+
+        /* =========================
+           POPUP STATISTIK
+        ========================= */
+
+        .popup-statistik {
+            width: 260px;
+        }
+
+        .popup-statistik h3 {
+            margin: 0 0 10px 0;
+
+            font-size: 17px;
+
+            border-bottom: 2px solid #333;
+
+            padding-bottom: 7px;
+        }
+
+        .stat-row {
+            display: flex;
+
+            justify-content: space-between;
+            align-items: center;
+
+            padding: 6px 0;
+
+            border-bottom: 1px solid #eeeeee;
+
+            font-size: 12px;
+        }
+
+        .stat-label {
+            display: flex;
+            align-items: center;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .dot {
+            width: 11px;
+            height: 11px;
+
+            border-radius: 50%;
+
+            display: inline-block;
+
+            margin-right: 7px;
+        }
+
+        .sr {
+            background: #2ca25f;
+        }
+
+        .r {
+            background: #a1d76a;
+        }
+
+        .s {
+            background: #ffff66;
+        }
+
+        .t {
+            background: #fdae61;
+        }
+
+        .st {
+            background: #d73027;
+        }
+
+        .total-row {
+            display: flex;
+
+            justify-content: space-between;
+
+            margin-top: 9px;
+
+            padding-top: 9px;
+
+            border-top: 2px solid #333;
+
+            font-size: 13px;
+
+            font-weight: bold;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- =========================
+         PETA
+    ========================= -->
+
+    <div id="map"></div>
+
+
+    <!-- =========================
+         JUDUL
+    ========================= -->
+
+    <div class="title-box">
+
+        <h2>FloodRisk Lampung</h2>
+
+        <p>
+            Peta Kerawanan Banjir Provinsi Lampung
+        </p>
+
+    </div>
+
+
+    <!-- =========================
+         INFO
+    ========================= -->
+
+    <div class="info-panel">
+
+        <h4>Informasi Peta</h4>
+
+        <p>
+            <b>Metode:</b> Random Forest
+        </p>
+
+        <p>
+            <b>Wilayah:</b> Provinsi Lampung
+        </p>
+
+        <p>
+            <b>Kelas:</b> 5 tingkat kerawanan
+        </p>
+
+        <p>
+            Klik wilayah kabupaten/kota
+            untuk melihat statistik.
+        </p>
+
+    </div>
+
+
+    <!-- LEAFLET JS -->
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+    </script>
+
+
+    <script>
+
+
+        // =====================================================
+        // 1. DATA STATISTIK KABUPATEN / KOTA
+        // =====================================================
+
+        var statistik = {
+
+            "LAMPUNG SELATAN": {
+                sangatRendah: 539.00,
+                rendah: 266.67,
+                sedang: 53.41,
+                tinggi: 134.04,
+                sangatTinggi: 72.00,
+                total: 1065.11
+            },
+
+            "LAMPUNG TIMUR": {
+                sangatRendah: 1125.14,
+                rendah: 598.65,
+                sedang: 156.21,
+                tinggi: 178.79,
+                sangatTinggi: 345.74,
+                total: 2404.52
+            },
+
+            "TULANGBAWANG": {
+                sangatRendah: 547.68,
+                rendah: 366.39,
+                sedang: 368.72,
+                tinggi: 373.42,
+                sangatTinggi: 889.53,
+                total: 2545.75
+            },
+
+            "PESAWARAN": {
+                sangatRendah: 191.13,
+                rendah: 81.16,
+                sedang: 49.99,
+                tinggi: 62.29,
+                sangatTinggi: 9.20,
+                total: 393.78
+            },
+
+            "TULANGBAWANG BARAT": {
+                sangatRendah: 224.66,
+                rendah: 220.91,
+                sedang: 76.67,
+                tinggi: 118.55,
+                sangatTinggi: 253.57,
+                total: 894.35
+            },
+
+            "LAMPUNG UTARA": {
+                sangatRendah: 517.19,
+                rendah: 350.51,
+                sedang: 112.70,
+                tinggi: 188.40,
+                sangatTinggi: 122.36,
+                total: 1291.16
+            },
+
+            "WAYKANAN": {
+                sangatRendah: 591.68,
+                rendah: 441.85,
+                sedang: 251.99,
+                tinggi: 207.33,
+                sangatTinggi: 332.28,
+                total: 1825.13
+            },
+
+            "PESISIR BARAT": {
+                sangatRendah: 228.22,
+                rendah: 129.65,
+                sedang: 64.04,
+                tinggi: 39.75,
+                sangatTinggi: 30.64,
+                total: 492.30
+            },
+
+            "LAMPUNG TENGAH": {
+                sangatRendah: 1223.45,
+                rendah: 543.50,
+                sedang: 312.58,
+                tinggi: 197.60,
+                sangatTinggi: 212.43,
+                total: 2489.57
+            },
+
+            "PRINGSEWU": {
+                sangatRendah: 121.13,
+                rendah: 54.33,
+                sedang: 43.17,
+                tinggi: 15.11,
+                sangatTinggi: 12.87,
+                total: 246.61
+            },
+
+            "BANDARLAMPUNG": {
+                sangatRendah: 40.96,
+                rendah: 17.88,
+                sedang: 16.84,
+                tinggi: 29.11,
+                sangatTinggi: 18.75,
+                total: 123.55
+            },
+
+            "LAMPUNG BARAT": {
+                sangatRendah: 226.16,
+                rendah: 122.91,
+                sedang: 32.98,
+                tinggi: 21.95,
+                sangatTinggi: 51.55,
+                total: 455.56
+            },
+
+            "MESUJI": {
+                sangatRendah: 688.86,
+                rendah: 228.73,
+                sedang: 325.61,
+                tinggi: 96.41,
+                sangatTinggi: 138.60,
+                total: 1478.21
+            },
+
+            "METRO": {
+                sangatRendah: 33.22,
+                rendah: 6.33,
+                sedang: 1.46,
+                tinggi: 0.03,
+                sangatTinggi: 0.00,
+                total: 41.03
+            },
+
+            "TANGGAMUS": {
+                sangatRendah: 472.17,
+                rendah: 253.23,
+                sedang: 80.77,
+                tinggi: 179.32,
+                sangatTinggi: 107.10,
+                total: 1092.58
+            }
+
+        };
+
+
+        // =====================================================
+        // 2. FORMAT ANGKA
+        // =====================================================
+
+        function formatAngka(angka) {
+
+            return angka.toLocaleString(
+                'id-ID',
+                {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }
+            );
+
+        }
+
+
+        // =====================================================
+        // 3. MEMBUAT POPUP STATISTIK
+        // =====================================================
+
+        function buatPopup(nama, data) {
+
+            return `
+
+                <div class="popup-statistik">
+
+                    <h3>
+                        ${nama}
+                    </h3>
+
+
+                    <div class="stat-row">
+
+                        <span class="stat-label">
+
+                            <span class="dot sr"></span>
+
+                            Sangat Rendah
+
+                        </span>
+
+                        <span class="stat-value">
+
+                            ${formatAngka(data.sangatRendah)}
+                            km²
+
+                        </span>
+
+                    </div>
+
+
+                    <div class="stat-row">
+
+                        <span class="stat-label">
+
+                            <span class="dot r"></span>
+
+                            Rendah
+
+                        </span>
+
+                        <span class="stat-value">
+
+                            ${formatAngka(data.rendah)}
+                            km²
+
+                        </span>
+
+                    </div>
+
+
+                    <div class="stat-row">
+
+                        <span class="stat-label">
+
+                            <span class="dot s"></span>
+
+                            Sedang
+
+                        </span>
+
+                        <span class="stat-value">
+
+                            ${formatAngka(data.sedang)}
+                            km²
+
+                        </span>
+
+                    </div>
+
+
+                    <div class="stat-row">
+
+                        <span class="stat-label">
+
+                            <span class="dot t"></span>
+
+                            Tinggi
+
+                        </span>
+
+                        <span class="stat-value">
+
+                            ${formatAngka(data.tinggi)}
+                            km²
+
+                        </span>
+
+                    </div>
+
+
+                    <div class="stat-row">
+
+                        <span class="stat-label">
+
+                            <span class="dot st"></span>
+
+                            Sangat Tinggi
+
+                        </span>
+
+                        <span class="stat-value">
+
+                            ${formatAngka(data.sangatTinggi)}
+                            km²
+
+                        </span>
+
+                    </div>
+
+
+                    <div class="total-row">
+
+                        <span>
+                            Total
+                        </span>
+
+                        <span>
+
+                            ${formatAngka(data.total)}
+                            km²
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+            `;
+
+        }
+
+
+        // =====================================================
+        // 4. INISIALISASI PETA
+        // =====================================================
+
+        var map = L.map('map');
+
+
+        // =====================================================
+        // 5. BASEMAP OPENSTREETMAP
+        // =====================================================
+
+        var osm = L.tileLayer(
+
+            'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+
+            {
+
+                attribution:
+                    '&copy; OpenStreetMap contributors'
+
+            }
+
+        );
+
+
+        osm.addTo(map);
+
+
+        // =====================================================
+        // 6. BOUNDING BOX LAMPUNG
+        // =====================================================
+
+        var bounds = [
+
+            [-5.939653, 103.583938],
+
+            [-3.725310, 105.911452]
+
+        ];
+
+
+        // =====================================================
+        // 7. RASTER KERAWANAN BANJIR
+        // =====================================================
+
+        var floodLayer = L.imageOverlay(
+
+            '../data/banjir_web.png',
+
+            bounds,
+
+            {
+
+                opacity: 0.7,
+
+                interactive: false
+
+            }
+
+        );
+
+
+        floodLayer.addTo(map);
+
+
+        // =====================================================
+        // 8. LAYER BATAS ADMINISTRASI
+        // =====================================================
+
+        var adminLayer = L.geoJSON(
+
+            null,
+
+            {
+
+                style: function(feature) {
+
+                    return {
+
+                        color: '#222222',
+
+                        weight: 2,
+
+                        opacity: 1,
+
+                        fill: true,
+
+                        fillColor: '#ffffff',
+
+                        fillOpacity: 0.01
+
+                    };
+
+                },
+
+
+                onEachFeature: function(feature, layer) {
+
+
+                    // -----------------------------------------
+                    // Ambil nama kabupaten/kota
+                    // -----------------------------------------
+
+                    var nama = (
+
+                        feature.properties.WADMKK ||
+
+                        feature.properties.NAMOBJ ||
+
+                        'Wilayah Tidak Diketahui'
+
+                    ).trim();
+
+
+                    // -----------------------------------------
+                    // Normalisasi nama
+                    // -----------------------------------------
+
+                    var key =
+                        nama
+                        .toUpperCase()
+                        .trim();
+
+
+                    console.log(
+                        'Wilayah:',
+                        nama
+                    );
+
+
+                    console.log(
+                        'Key:',
+                        key
+                    );
+
+
+                    console.log(
+                        'Statistik:',
+                        statistik[key]
+                    );
+
+
+                    // -----------------------------------------
+                    // Ambil data statistik
+                    // -----------------------------------------
+
+                    var data =
+                        statistik[key];
+
+
+                    // -----------------------------------------
+                    // Kalau data tersedia
+                    // -----------------------------------------
+
+                    if (data) {
+
+                        layer.bindPopup(
+
+                            buatPopup(
+                                nama,
+                                data
+                            ),
+
+                            {
+
+                                maxWidth: 320,
+
+                                closeButton: true
+
+                            }
+
+                        );
+
+                    }
+
+
+                    // -----------------------------------------
+                    // Kalau data tidak ditemukan
+                    // -----------------------------------------
+
+                    else {
+
+                        layer.bindPopup(
+
+                            `
+                            <div class="popup-statistik">
+
+                                <h3>
+                                    ${nama}
+                                </h3>
+
+                                <p>
+                                    Data statistik
+                                    tidak ditemukan.
+                                </p>
+
+                            </div>
+                            `
+
+                        );
+
+                    }
+
+
+                    // =================================================
+                    // HOVER
+                    // =================================================
+
+                    layer.on(
+
+                        'mouseover',
+
+                        function(e) {
+
+                            e.target.setStyle({
+
+                                weight: 4,
+
+                                color: '#000000',
+
+                                fillOpacity: 0.15
+
+                            });
+
+
+                            e.target.bringToFront();
+
+                        }
+
+                    );
+
+
+                    layer.on(
+
+                        'mouseout',
+
+                        function(e) {
+
+                            adminLayer.resetStyle(
+                                e.target
+                            );
+
+                        }
+
+                    );
+
+
+                    // =================================================
+                    // CLICK
+                    // =================================================
+
+                    layer.on(
+
+                        'click',
+
+                        function(e) {
+
+                            console.log(
+                                '================================'
+                            );
+
+                            console.log(
+                                'WILAYAH DIKLIK:',
+                                nama
+                            );
+
+                            console.log(
+                                'DATA:',
+                                data
+                            );
+
+                            console.log(
+                                '================================'
+                            );
+
+
+                            e.target.openPopup();
+
+                        }
+
+                    );
+
+                }
+
+            }
+
+        );
+
+
+        // =====================================================
+        // 9. LOAD GEOJSON
+        // =====================================================
+
+        fetch(
+
+            '../data/LAMPUNG_4326.geojson'
+
+        )
+
+        .then(
+
+            function(response) {
+
+                console.log(
+                    'Status GeoJSON:',
+                    response.status
+                );
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        'GeoJSON tidak ditemukan'
+                    );
+
+                }
+
+
+                return response.json();
+
+            }
+
+        )
+
+        .then(
+
+            function(data) {
+
+                console.log(
+                    'GeoJSON berhasil dimuat'
+                );
+
+
+                console.log(
+                    'Jumlah feature:',
+                    data.features.length
+                );
+
+
+                // Masukkan GeoJSON ke layer
+
+                adminLayer.addData(
+                    data
+                );
+
+
+                // Tampilkan batas administrasi
+
+                adminLayer.addTo(
+                    map
+                );
+
+
+                console.log(
+                    'Layer administrasi berhasil ditambahkan'
+                );
+
+
+                console.log(
+                    'Jumlah layer:',
+                    adminLayer.getLayers().length
+                );
+
+
+                // Pastikan layer administrasi
+                // berada di atas raster
+
+                adminLayer.bringToFront();
+
+
+            }
+
+        )
+
+        .catch(
+
+            function(error) {
+
+                console.error(
+                    'ERROR GEOJSON:',
+                    error
+                );
+
+                alert(
+                    'GeoJSON gagal dimuat. Cek Console (F12).'
+                );
+
+            }
+
+        );
+
+
+        // =====================================================
+        // 10. FIT MAP
+        // =====================================================
+
+        map.fitBounds(
+            bounds
+        );
+
+
+        // =====================================================
+        // 11. LAYER CONTROL
+        // =====================================================
+
+        var baseMaps = {
+
+            "OpenStreetMap": osm
+
+        };
+
+
+        var overlayMaps = {
+
+            "Kerawanan Banjir": floodLayer,
+
+            "Batas Kabupaten/Kota": adminLayer
+
+        };
+
+
+        L.control.layers(
+
+            baseMaps,
+
+            overlayMaps,
+
+            {
+
+                collapsed: false
+
+            }
+
+        ).addTo(map);
+
+
+        // =====================================================
+        // 12. LEGEND
+        // =====================================================
+
+        var legend =
+            L.control({
+
+                position: 'bottomright'
+
+            });
+
+
+        legend.onAdd = function(map) {
+
+
+            var div =
+                L.DomUtil.create(
+                    'div',
+                    'legend'
+                );
+
+
+            div.innerHTML +=
+                '<h4>Kerawanan Banjir</h4>';
+
+
+            var items = [
+
+                [
+                    '#2ca25f',
+                    'Sangat Rendah'
+                ],
+
+                [
+                    '#a1d76a',
+                    'Rendah'
+                ],
+
+                [
+                    '#ffff66',
+                    'Sedang'
+                ],
+
+                [
+                    '#fdae61',
+                    'Tinggi'
+                ],
+
+                [
+                    '#d73027',
+                    'Sangat Tinggi'
+                ]
+
+            ];
+
+
+            for (
+
+                var i = 0;
+
+                i < items.length;
+
+                i++
+
+            ) {
+
+
+                div.innerHTML +=
+
+                    '<i style="background:' +
+                    items[i][0] +
+                    '"></i>' +
+
+                    items[i][1] +
+
+                    '<br>';
+
+            }
+
+
+            return div;
+
+        };
+
+
+        legend.addTo(map);
+
+
+    </script>
+
+</body>
+
+</html>
